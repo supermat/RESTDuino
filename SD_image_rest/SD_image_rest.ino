@@ -231,7 +231,7 @@ char* GetFirstArg(char *str)
 // returns 0 if not web Page
 char IsWebPage(char *str)
 {
-  if (StrContains(str, "GET / HTTP/") || StrContains(str, ".htm") || StrContains(str, ".jpg"))
+  if (StrContains(str, "GET / HTTP/") || StrContains(str, ".htm") || StrContains(str, ".jpg") || StrContains(str, ".ico"))
   {
     return 1;
   }

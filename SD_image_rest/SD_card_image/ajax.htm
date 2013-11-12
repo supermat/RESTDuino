@@ -1,0 +1,36 @@
+<html>
+<head>
+	<title>Arduino Web Page</title>
+	<script>
+	function GetData() {
+		nocache = "&nocache=" + Math.random() * 1000000;
+		var request = new XMLHttpRequest();
+		request.onreadystatechange = function() {
+			if (this.readyState == 4) {
+				if (this.status == 200) {
+					if (this.responseText != null) {
+						document.getElementById("temp_txt").innerHTML = this.responseText;
+			}}}}
+		request.open("GET", "ws/temp" + nocache, true);
+		request.send(null)
+		var request = new XMLHttpRequest();
+		request.onreadystatechange = function() {
+			if (this.readyState == 4) {
+				if (this.status == 200) {
+					if (this.responseText != null) {
+						document.getElementById("hum_txt").innerHTML = this.responseText;
+			}}}}
+		request.open("GET", "ws/humidite" + nocache, true);
+		request.send(null)
+		setTimeout('GetData()', 1000);
+	}	
+	</script>
+</head>
+<body onload="GetData()">
+<h1>Arduino AJAX Status</h1>
+<p id="temp_txt">Température : Not requested...</p>
+
+<p id="hum_txt">Humidité : Not requested...</p>
+<p>Go back to <a href="index.htm">main page</a>.</p>
+</body>
+</html>

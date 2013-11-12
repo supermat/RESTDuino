@@ -3,20 +3,20 @@
 
   Description:  Arduino web server that serves up a basic web
                 page that displays an image.
-  
+
   Hardware:     Arduino Uno and official Arduino Ethernet
                 shield. Should work with other Arduinos and
                 compatible Ethernet shields.
                 2Gb micro SD card formatted FAT16
-                
+
   Software:     Developed using Arduino 1.0.5 software
                 Should be compatible with Arduino 1.0 +
-                
+
                 Requires index.htm, page2.htm and pic.jpg to be
                 on the micro SD card in the Ethernet shield
                 micro SD card socket.
-  
-  References:   - WebServer example by David A. Mellis and 
+
+  References:   - WebServer example by David A. Mellis and
                   modified by Tom Igoe
                 - SD card examples by David A. Mellis and
                   Tom Igoe
@@ -27,13 +27,18 @@
 
   Date:         7 March 2013
   Modified:     17 June 2013
- 
+
   Author:       W.A. Smith, http://startingelectronics.com
 --------------------------------------------------------------*/
 
 #include <SPI.h>
 #include <Ethernet.h>
 #include <SD.h>
+#include <DHT.h>
+
+#define DHTPIN 2     // what pin we're connected to
+#define DHTTYPE DHT11   // DHT 11 
+DHT dht(DHTPIN, DHTTYPE);
 
 // size of buffer used to capture HTTP requests
 #define REQ_BUF_SZ   20
@@ -52,9 +57,9 @@ void setup()
     // disable Ethernet chip
     pinMode(10, OUTPUT);
     digitalWrite(10, HIGH);
-    
+
     Serial.begin(9600);       // for debugging
-    
+
     // initialize SD card
     Serial.println("Initializing SD card...");
     if (!SD.begin(4)) {
@@ -68,9 +73,11 @@ void setup()
         return;  // can't find index file
     }
     Serial.println("SUCCESS - Found index.htm file.");
-    
+
     Ethernet.begin(mac, ip);  // initialize Ethernet device
     server.begin();           // start to listen for clients
+    
+    dht.begin();
 }
 
 void loop()
@@ -93,9 +100,14 @@ void loop()
                 // last line of client request is blank and ends with \n
                 // respond to client only after last line received
                 if (c == '\n' && currentLineIsBlank) {
-                  
-                  if(IsWebPage(HTTP_req))
+                  if (StrContains(HTTP_req, "/ws/")) {
+                    Serial.print("WebService");
+                        //Web Services
+                        WS(client,HTTP_req);
+                  }
+                  else if(IsWebPage(HTTP_req))
                   {
+                    Serial.print("WebPage");
                     ShowWebPageInSD(HTTP_req);
                   }
                   else
@@ -128,7 +140,7 @@ void loop()
                     // last character on line of received text
                     // starting new line with next character read
                     currentLineIsBlank = true;
-                } 
+                }
                 else if (c != '\r') {
                     // a text character was received from client
                     currentLineIsBlank = false;
@@ -159,7 +171,7 @@ char StrContains(char *str, char *sfind)
     char len;
 
     len = strlen(str);
-    
+
     if (strlen(sfind) > len) {
         return 0;
     }
@@ -244,7 +256,7 @@ void ShowWebPageInSD(char *str)
     String urlString = String(str);
     urlString = urlString.substring(urlString.indexOf('/')+1, urlString.indexOf(' ', urlString.indexOf('/')));
     urlString.toCharArray(v_Fichier, CMDBUF);
-    
+
     if(StrContains(str, "GET / HTTP/"))
     {
       String("index.htm").toCharArray(v_Fichier, CMDBUF);
@@ -273,6 +285,7 @@ void ShowWebPageInSD(char *str)
           }
       }
           if (webFile) {
+            Serial.println("On lit le fichier");
                         while(webFile.available()) {
                             client.write(webFile.read()); // send web page to client
                         }
@@ -288,4 +301,35 @@ void ShowWebPageInSD(char *str)
       client.println("<h2>Fichier non trouve!</h2>");
     }
 
+}
+
+// send the state of the switch to the web browser
+void WS(EthernetClient cl, char* p_req)
+{
+  Serial.println("Web Services");
+  
+  if (StrContains(p_req, "temp")){
+    
+     float t = dht.readTemperature();
+     if (isnan(t))
+     {
+       cl.println("Failed to read temp from DHT");
+     }else{
+        cl.print("Température (°C): ");
+        cl.println(t);
+     }
+  }
+ else if (StrContains(p_req, "humidite")){
+     float h = dht.readHumidity();
+     if (isnan(h))
+     {
+       cl.println("Failed to read humidity from DHT");
+     }else{
+        cl.print("Humidité: ");
+        cl.println(h);
+     }
+ }
+ else{
+    cl.println("inconnu");
+ }
 }
